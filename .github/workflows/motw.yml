@@ -1,0 +1,17 @@
+name: MOTW Checker
+on:
+  schedule:
+    - cron: '5 0 * * 3'   # Every Wednesday at 00:05 UTC (5 min buffer)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install requests beautifulsoup4
+      - run: python motw_checker.py
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
