@@ -1,0 +1,76 @@
+import discord
+import requests
+from bs4 import BeautifulSoup
+import json, os
+
+TOKEN = os.environ["BOT_TOKEN"]
+CHANNEL_ID = int(os.environ["CHANNEL_ID"])
+
+WIKI_URL = "https://dungeondefenders.wiki.gg/wiki/Map_of_the_Week"
+STATE_FILE = "last_motw.json"
+
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
+
+
+def get_current_motw():
+    r = requests.get(WIKI_URL, timeout=10)
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    table = soup.find("table", class_="wikitable")
+    cells = table.find_all("td")
+
+    return {
+        "promoted": cells[0].get_text(strip=True),
+        "bonus": cells[1].get_text(strip=True),
+        "starting": cells[2].get_text(strip=True)
+    }
+
+
+def load_last():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def save_last(data):
+    with open(STATE_FILE, "w") as f:
+        json.dump(data, f)
+
+
+async def send_to_discord(motw):
+    channel = client.get_channel(CHANNEL_ID)
+
+    embed = discord.Embed(
+        title="🗺️ New Map of the Week!",
+        url=WIKI_URL,
+        color=0x9999ff
+    )
+
+    embed.add_field(name="Promoted Map", value=motw["promoted"], inline=True)
+    embed.add_field(name="Bonus Map", value=motw["bonus"], inline=True)
+    embed.add_field(name="Starting", value=motw["starting"], inline=False)
+    embed.set_footer(text="Dungeon Defenders • Map of the Week")
+
+    await channel.send(embed=embed)
+
+
+@client.event
+async def on_ready():
+    print(f"Logged in as {client.user}")
+
+    current = get_current_motw()
+    last = load_last()
+
+    if current != last:
+        await send_to_discord(current)
+        save_last(current)
+        print(f"New MOTW posted: {current['promoted']}")
+    else:
+        print("No change.")
+
+    await client.close()
+
+
+client.run(TOKEN)
