@@ -1,7 +1,7 @@
 name: MOTW Checker
 on:
   schedule:
-    - cron: '30 8 * * 3'  
+    - cron: '*/5 * * * *'  
   workflow_dispatch:
 
 jobs:
